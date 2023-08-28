@@ -140,9 +140,9 @@ void motor_control(){
         tim = t.read_ms();
 
         if(tim<=3000){
-            target_transition += 8650.0/1200.0;
+            target_transition += 7.21;
         }else if(tim>3000 && tim <= 4000){
-            target_transition = -(4531.0)/(1250000.0)*pow(tim-4000.0, 2.0) + target_plus;
+            target_transition = -0.00362*pow(tim-4000.0, 2.0) + target_plus;
         }else{
             target_transition = target_plus;
         }
@@ -152,9 +152,9 @@ void motor_control(){
         tim = t.read_ms();
 
         if(tim<=3000){
-            target_transition -= 8650.0/1200.0;
+            target_transition -= 7.21;
         }else if(tim>3000 && tim <= 4000){
-            target_transition = (4531.0)/(1250000.0)*pow(tim-4000.0, 2.0) + target_minus;
+            target_transition = 0.00362*pow(tim-4000.0, 2.0) + target_minus;
         }else{
             target_transition = target_minus;
         }
@@ -162,8 +162,8 @@ void motor_control(){
     }
     encoder_count = encoder.get_encoder_count();
     vol = (pid_motor(encoder_count, target_transition));
-    pwm1.write(0.50 -vol);
-    pwm2.write(0.50 +vol);
+    pwm1.write(0.50f -vol);
+    pwm2.write(0.50f +vol);
 }
 
 int main(void){ 
