@@ -306,13 +306,9 @@ void x_move(unsigned char& j_LX){
             }
             pwm_x1.write(0.50 -vol1);
             pwm_x2.write(0.50 +vol1);
-            HAL_Delay(100);
-
         }else{
             pwm_x1.write(0.50f);
             pwm_x2.write(0.50f);
-            HAL_Delay(100);
-
         }
 }
 
@@ -328,12 +324,10 @@ void y_move(unsigned char& j_RY){
             }
             pwm_y1.write(0.50 -vol2);
             pwm_y2.write(0.50 +vol2);
-            HAL_Delay(100);
 
         }else{
             pwm_y1.write(0.50f);
             pwm_y2.write(0.50f);
-            HAL_Delay(100);
 
         }
 }
