@@ -23,6 +23,10 @@ bool b_A;
 bool b_B;
 bool b_X;
 bool b_Y;
+bool b_R;
+bool b_L;
+bool b_ZL;
+bool b_ZR; 
 bool b_minus;
 bool b_plus;
 bool b_home;
@@ -34,9 +38,11 @@ unsigned char j_LY;
 unsigned char j_RX;
 unsigned char j_RY;
 
+DigitalOut led(LED1);
+
 // アーム回転用モータ: TIM1
-PwmOut pwm1(PA_8);
-PwmOut pwm2(PA_10);
+PwmOut pwm_rot1(PA_8);
+PwmOut pwm_rot2(PA_10);
 float vol=0.0f;
 
 // PID
@@ -76,7 +82,12 @@ DigitalOut valve3(PB_7);
 DigitalOut hand[3] = {valve1, valve2, valve3};
 
 // サーボ
-Servo6221MG servo(PC_8);
+Servo6221MG servo1(PC_9);
+Servo6221MG servo2(PC_8);
+Servo6221MG servo_motors[]={servo1, servo2};
+int each_range = 90;
+int p0=90, p1=90;
+int temp_angle_0=90, temp_angle_1=90;
 
 // リミットスイッチ
 DigitalIn limit1(PC_12);
@@ -84,6 +95,10 @@ DigitalIn limit1(PC_12);
 // xy移動用関数
 void x_move(unsigned char& j_LX);
 void y_move(unsigned char& j_RY);
+
+// ServoMotor制御
+void servo_rot_p(bool& b_R, int& p, int& temp_angle, int i);
+void servo_rot_m(bool& b_L, int& p, int& temp_angle, int i);
 
 // ハンド制御
 void hand_control(bool& b, int i);
@@ -162,20 +177,20 @@ void motor_control(){
     }
     encoder_count = encoder.get_encoder_count();
     vol = (pid_motor(encoder_count, target_transition));
-    pwm1.write(0.50f -vol);
-    pwm2.write(0.50f +vol);
+    pwm_rot1.write(0.50f -vol);
+    pwm_rot2.write(0.50f +vol);
 }
 
 int main(void){ 
     int flag=1;
-    printf("Program_Start! \n");
+    printf("Program_Start! \r\n");
     
     flipper.attach(&motor_control, chrono::milliseconds(time));
 
-    pwm1.period_us(100);
-    pwm2.period_us(100);
-    pwm1.write(0.50f);
-    pwm2.write(0.50f);
+    pwm_rot1.period_us(100);
+    pwm_rot2.period_us(100);
+    pwm_rot1.write(0.50f);
+    pwm_rot2.write(0.50f);
     
     pwm_x1.period_us(100);
     pwm_x2.period_us(100);
@@ -195,6 +210,11 @@ int main(void){
     TIM3->CR1 |= TIM_CR1_CMS_0;
     TIM4->CR1 |= TIM_CR1_CMS_0;
 
+    // サーボ初期化
+    servo_motors[0].init();
+    servo_motors[1].init();
+
+
     serial_port.set_baud(115200);
 
     while(1){
@@ -203,7 +223,10 @@ int main(void){
         b_B = wii.button_B();
         b_X = wii.button_X();
         b_Y = wii.button_Y();
-
+        b_R = wii.button_R();
+        b_L = wii.button_L();
+        b_ZR = wii.button_ZR();
+        b_ZL = wii.button_ZL();
         b_plus = wii.button_plus();
         b_minus = wii.button_minus();
         b_home = wii.button_home();
@@ -244,6 +267,16 @@ int main(void){
         hand_control(b_X, 1);
         hand_control(b_Y, 2);
 
+        // b_Rを押すごとに90°回転．ただし, 180°未満の場合のみ
+        servo_rot_p(b_R, p0, temp_angle_0, 0);
+        // b_Lを押すごとに-90°回転．ただし, 180°以上の場合のみ
+        servo_rot_m(b_L, p0, temp_angle_0, 0);
+
+        // b_ZRを押すごとに90°回転．ただし, 180°未満の場合のみ
+        servo_rot_p(b_ZR, p1, temp_angle_1, 1);
+        // b_ZLを押すごとに-90°回転．ただし, 180°以上の場合のみ
+        servo_rot_m(b_ZL, p1, temp_angle_1, 1);
+
         // ジョイスティックの入力を非線形に -0.5 - +0.5 の間に変換(x方向の制御)
         x_move(j_LX);
         // ジョイスティックの入力を非線形に -0.5 - +0.5 の間に変換(y方向の制御)
@@ -271,12 +304,13 @@ int main(void){
         */
         
         // debug
+        /*
         if(flag==1){
             printf("%d,%f,%d\r\n",t.read_ms(), target_transition, encoder.get_encoder_count());
             //printf("pre_integral: %f\r\n", pre_i);
             //printf("p: %f, i: %f, d: %f\r\n", p, i, d);
             //HAL_Delay(200);
-        }
+        }*/
 
 
         //HAL_Delay(200);
@@ -295,41 +329,113 @@ int main(void){
 }
 
 void x_move(unsigned char& j_LX){
-    if((j_LX - JYOY_L_CENTER-2) != 0){
+    float x = j_LX - JYOY_L_CENTER-2;
+    float x1 = 8.0f;
+    float x2 = 18.0f;
+    float x3 = 26.0f;
+
+    if(x != 0.0f){
             // 変換式
-            vol1 = 1.0/(1.0+exp(-0.09*(j_LX-JYOY_L_CENTER-2))) - 1.0/2.0;
-            //float vol = (1.0/tanh(j_LX - JYOY_L_CENTER - 2) - 1.0/(j_LX - JYOY_L_CENTER - 2)) / 2.0;
-            if(vol1 >= 0.48){
-                vol1 = 0.48;
-            }else if(vol1 <= -0.48){
-                vol1 = -0.48;
-            }
-            pwm_x1.write(0.50 -vol1);
-            pwm_x2.write(0.50 +vol1);
-        }else{
-            pwm_x1.write(0.50f);
-            pwm_x2.write(0.50f);
+        if(x>0.0f && x<=x1){
+            vol1 = 0.0015625*x*x;
+        }else if(x>x1 && x<=x2){
+            vol1 = 0.025*(x-20.0) + 0.35; 
+        }else if (x>x2 && x<=x3) {
+            vol1 = -0.0015625*(x-26.0)*(x-26.0) + 0.45;
+        }else if(x<0.0f && x>=-x1){
+            vol1 = -0.0015625*x*x;
+        }else if(x<-x1 && x>=-x2){
+            vol1 = 0.025*(x+20.0) - 0.35; 
+        }else if (x<-x2 && x>=-x3) {
+            vol1 = 0.0015625*(x+26.0)*(x+26.0) - 0.45;
         }
+
+        if(vol1 >= 0.45){
+            vol1 = 0.45;
+        }else if(vol1 <= -0.45){
+            vol1 = -0.45;
+        }
+        pwm_x1.write(0.50 -vol1);
+        pwm_x2.write(0.50 +vol1);
+    }else{
+        pwm_x1.write(0.50f);
+        pwm_x2.write(0.50f);
+    }
 }
 
 void y_move(unsigned char& j_RY){
-    if((j_RY - JYOY_R_CENTER-1) != 0){
-            // 変換式
-            vol2 = (1.0/(1.0+exp(-0.09*(j_RY-JYOY_R_CENTER-1))) - 1.0/2.0)*1.7;
-            //float vol = (1.0/tanh(j_LX - JYOY_L_CENTER - 2) - 1.0/(j_LX - JYOY_L_CENTER - 2)) / 2.0;
-            if(vol2 >= 0.48){
-                vol2 = 0.48;
-            }else if(vol2 <= -0.48){
-                vol2 = -0.48;
-            }
-            pwm_y1.write(0.50 -vol2);
-            pwm_y2.write(0.50 +vol2);
+    float y = 2.0*(j_RY - JYOY_R_CENTER-1);
+    float y1 = 8.0f;
+    float y2 = 18.0f;
+    float y3 = 26.0f;
+    if(y != 0){
+        if(y>0) y+=1;
 
-        }else{
-            pwm_y1.write(0.50f);
-            pwm_y2.write(0.50f);
-
+        // 変換式
+        if(y>0.0f && y<=y1){
+            vol2 = 0.0015625*y*y;
+        }else if(y>y1 && y<=y2){
+            vol2 = 0.025*(y-20.0) + 0.35; 
+        }else if (y>y2 && y<=y3) {
+            vol2 = -0.0015625*(y-26.0)*(y-26.0) + 0.45;
+        }else if(y<0.0f && y>=-y1){
+            vol2 = -0.0015625*y*y;
+        }else if(y<-y1 && y>=-y2){
+            vol2 = 0.025*(y+20.0) - 0.35; 
+        }else if (y<-y2 && y>=-y3) {
+            vol2 = 0.0015625*(y+26.0)*(y+26.0) - 0.45;
         }
+        if(vol2 >= 0.45){
+            vol2 = 0.45;
+        }else if(vol2 <= -0.45){
+            vol2 = -0.45;
+        }
+        pwm_y1.write(0.50f -vol2);
+        pwm_y2.write(0.50f +vol2);
+    }else{
+        pwm_y1.write(0.50f);
+        pwm_y2.write(0.50f);
+    }
+}
+
+void servo_rot_p(bool& b_R_, int& p, int& temp_angle, int i){
+    if(b_R_ && p >= 0 && p < 180){
+            //** down **//
+        temp_angle += each_range;
+        if(temp_angle >= 180){
+            temp_angle = 179;
+        }
+        while (p < temp_angle) {
+            HAL_Delay(3);
+            servo_motors[i].roll(p);
+            p += 1;
+            led = !led;
+            //printf("p:%d\r\n", p);
+        }
+        printf("now p%d: %d\n\r", i, p);
+        HAL_Delay(10);
+    }
+}
+
+void servo_rot_m(bool& b_L_, int& p, int& temp_angle, int i){
+    if(b_L_ && p > 0 && p < 180){
+        //** up **//
+        temp_angle -= each_range;
+        if(temp_angle < 0){
+            temp_angle = 0;
+        }
+        while (p >= temp_angle) {
+            HAL_Delay(3);
+            servo_motors[i].roll(p);
+            p -= 1;
+            led = !led;
+        }
+        if(p<0){
+            p=0;
+        }
+        printf("now p%d: %d\n\r", i, p);
+        HAL_Delay(10);
+    }   
 }
 
 void hand_control(bool& b, int i){
