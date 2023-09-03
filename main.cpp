@@ -39,7 +39,7 @@ DigitalOut led(LED1);
 // アーム回転用モータ: TIM1
 PwmOut pwm_rot1(PA_8);
 PwmOut pwm_rot2(PA_10);
-float vol=0.0f;
+float vol_rot=0.0f;
 
 // PID
 float target_count = 0.0f;
@@ -171,9 +171,9 @@ void motor_control(){
 
     }
     encoder_count = encoder.get_encoder_count();
-    vol = (pid_motor(encoder_count, target_transition));
-    pwm_rot1.write(0.50f -vol);
-    pwm_rot2.write(0.50f +vol);
+    vol_rot = (pid_motor(encoder_count, target_transition));
+    pwm_rot1.write(0.50f -vol_rot);
+    pwm_rot2.write(0.50f +vol_rot);
 }
 
 int main(void){ 
