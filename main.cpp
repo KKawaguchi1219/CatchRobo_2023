@@ -6,7 +6,7 @@
 
 
 // wiiリモコン
-WiiClassicController wii(D14, D15); // SDA(left side on rev C, GREEN), SCL(D6, YELLOW)
+WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 
 // コントローラー値
 #define I2C_UPDATE_TIME 1.0
@@ -65,11 +65,11 @@ float encoder_count = 0.0f;
 //x軸モータ: TIM2
 PwmOut pwm_x1(PB_10);
 PwmOut pwm_x2(PB_3);
-float vol1=0.0f;
+float vol_x=0.0f;
 //y軸モータ: TIM3
 PwmOut pwm_y1(PB_4);
 PwmOut pwm_y2(PB_5);
-float vol2=0.0f;
+float vol_y=0.0f;
 
 // 空気圧バルブ(ハンド)
 DigitalOut valve1(PC_3);
@@ -177,9 +177,11 @@ void motor_control(){
 }
 
 int main(void){ 
+
     printf("Program_Start! \r\n");
     int flag=1;
     serial_port.set_baud(115200);
+
 
     // pid制御用割込み関数
     flipper.attach(&motor_control, chrono::milliseconds(time));
@@ -309,13 +311,13 @@ int main(void){
             //printf("p: %f, i: %f, d: %f\r\n", p, i, d);
             //HAL_Delay(200);
         }*/
-        /*
+        
         printf("j_LX: %d\r\n", j_LX - JYOY_L_CENTER-2);
         printf("j_RY: %d\r\n", j_RY - JYOY_R_CENTER-1);
-        printf("Volum_x: %f\r\n", vol1);
-        printf("Volum_y: %f\r\n", vol2);
+        printf("Volum_x: %f\r\n", vol_x);
+        printf("Volum_y: %f\r\n", vol_y);
         printf("limit1: %d\r\n", limit1.read());
-        */
+        
 
         //HAL_Delay(200);
     }
@@ -341,26 +343,26 @@ void x_move(unsigned char& j_LX){
     if(x != 0.0f){
             // 変換式
         if(x>0.0f && x<=x1){
-            vol1 = 0.0015625*x*x;
+            vol_x = 0.0015625*x*x;
         }else if(x>x1 && x<=x2){
-            vol1 = 0.025*(x-20.0) + 0.35; 
+            vol_x = 0.025*(x-20.0) + 0.35; 
         }else if (x>x2 && x<=x3) {
-            vol1 = -0.0015625*(x-26.0)*(x-26.0) + 0.45;
+            vol_x = -0.0015625*(x-26.0)*(x-26.0) + 0.45;
         }else if(x<0.0f && x>=-x1){
-            vol1 = -0.0015625*x*x;
+            vol_x = -0.0015625*x*x;
         }else if(x<-x1 && x>=-x2){
-            vol1 = 0.025*(x+20.0) - 0.35; 
+            vol_x = 0.025*(x+20.0) - 0.35; 
         }else if (x<-x2 && x>=-x3) {
-            vol1 = 0.0015625*(x+26.0)*(x+26.0) - 0.45;
+            vol_x = 0.0015625*(x+26.0)*(x+26.0) - 0.45;
         }
 
-        if(vol1 >= 0.45){
-            vol1 = 0.45;
-        }else if(vol1 <= -0.45){
-            vol1 = -0.45;
+        if(vol_x >= 0.45){
+            vol_x = 0.45;
+        }else if(vol_x <= -0.45){
+            vol_x = -0.45;
         }
-        pwm_x1.write(0.50 -vol1);
-        pwm_x2.write(0.50 +vol1);
+        pwm_x1.write(0.50 -vol_x);
+        pwm_x2.write(0.50 +vol_x);
     }else{
         pwm_x1.write(0.50f);
         pwm_x2.write(0.50f);
@@ -377,25 +379,25 @@ void y_move(unsigned char& j_RY){
 
         // 変換式
         if(y>0.0f && y<=y1){
-            vol2 = 0.0015625*y*y;
+            vol_y = 0.0015625*y*y;
         }else if(y>y1 && y<=y2){
-            vol2 = 0.025*(y-20.0) + 0.35; 
+            vol_y = 0.025*(y-20.0) + 0.35; 
         }else if (y>y2 && y<=y3) {
-            vol2 = -0.0015625*(y-26.0)*(y-26.0) + 0.45;
+            vol_y = -0.0015625*(y-26.0)*(y-26.0) + 0.45;
         }else if(y<0.0f && y>=-y1){
-            vol2 = -0.0015625*y*y;
+            vol_y = -0.0015625*y*y;
         }else if(y<-y1 && y>=-y2){
-            vol2 = 0.025*(y+20.0) - 0.35; 
+            vol_y = 0.025*(y+20.0) - 0.35; 
         }else if (y<-y2 && y>=-y3) {
-            vol2 = 0.0015625*(y+26.0)*(y+26.0) - 0.45;
+            vol_y = 0.0015625*(y+26.0)*(y+26.0) - 0.45;
         }
-        if(vol2 >= 0.45){
-            vol2 = 0.45;
-        }else if(vol2 <= -0.45){
-            vol2 = -0.45;
+        if(vol_y >= 0.45){
+            vol_y = 0.45;
+        }else if(vol_y <= -0.45){
+            vol_y = -0.45;
         }
-        pwm_y1.write(0.50f -vol2);
-        pwm_y2.write(0.50f +vol2);
+        pwm_y1.write(0.50f -vol_y);
+        pwm_y2.write(0.50f +vol_y);
     }else{
         pwm_y1.write(0.50f);
         pwm_y2.write(0.50f);
@@ -416,7 +418,7 @@ void servo_rot_p(bool& b_R_, int& p, int& temp_angle, Servo6221MG& servo){
             led = !led;
             //printf("p:%d\r\n", p);
         }
-        printf("now p1: %d\n\r", p);
+        printf("now p1: %d\r\n", p);
         HAL_Delay(10);
     }
 }
@@ -437,7 +439,7 @@ void servo_rot_m(bool& b_L_, int& p, int& temp_angle, Servo6221MG& servo){
         if(p<0){
             p=0;
         }
-        printf("now p1: %d\n\r", p);
+        printf("now p1: %d\r\n", p);
         HAL_Delay(10);
     }   
 }
