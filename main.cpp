@@ -14,10 +14,6 @@ WiiClassicController wii(D14, D15); // SDA(left side on rev C, GREEN), SCL(D6, Y
 #define JYOY_R_CENTER 16
 #define JYOY_MARGIN 4
 #define JYOY_MARGIN2 3
-#define x_gain_1 0.05;
-#define y_gain_1 0.05;
-#define x_gain_2 0.02;
-#define y_gain_2 0.02;
 
 bool b_A;
 bool b_B;
@@ -79,15 +75,12 @@ float vol2=0.0f;
 DigitalOut valve1(PC_3);
 DigitalOut valve2(PC_2);
 DigitalOut valve3(PB_7);
-DigitalOut hand[3] = {valve1, valve2, valve3};
 
 // サーボ
-Servo6221MG servo1(PC_9);
-Servo6221MG servo2(PC_8);
-Servo6221MG servo_motors[]={servo1, servo2};
+Servo6221MG servo1(PB_6);
 int each_range = 90;
-int p0=90, p1=90;
-int temp_angle_0=90, temp_angle_1=90;
+int p1=90;
+int temp_angle_1=90;
 
 // リミットスイッチ
 DigitalIn limit1(PC_12);
@@ -97,11 +90,11 @@ void x_move(unsigned char& j_LX);
 void y_move(unsigned char& j_RY);
 
 // ServoMotor制御
-void servo_rot_p(bool& b_R, int& p, int& temp_angle, int i);
-void servo_rot_m(bool& b_L, int& p, int& temp_angle, int i);
+void servo_rot_p(bool& b_R, int& p, int& temp_angle, Servo6221MG& servo);
+void servo_rot_m(bool& b_L, int& p, int& temp_angle, Servo6221MG& servo);
 
 // ハンド制御
-void hand_control(bool& b, int i);
+void hand_control(bool& b, DigitalOut& hand, int i);
 
 // Timer割込み
 Ticker flipper;
@@ -109,6 +102,8 @@ Ticker flipper;
 
 Timer t;
 int tim=0;
+
+//　デバッグ出力用
 static BufferedSerial serial_port(USBTX, USBRX);
 
 // PID制御
@@ -182,16 +177,30 @@ void motor_control(){
 }
 
 int main(void){ 
-    int flag=1;
     printf("Program_Start! \r\n");
-    
+    int flag=1;
+    serial_port.set_baud(115200);
+
+    // pid制御用割込み関数
     flipper.attach(&motor_control, chrono::milliseconds(time));
 
+    limit1.mode(PullDown);
+
+    // ハンド初期化
+    valve1=0;
+    valve2=0;
+    valve3=0;
+
+    // サーボ初期化
+    servo1.init();
+
+    // アーム回転用DCモータ
     pwm_rot1.period_us(100);
     pwm_rot2.period_us(100);
     pwm_rot1.write(0.50f);
     pwm_rot2.write(0.50f);
     
+    // ハンド移動用(xy軸移動用)DCモータ
     pwm_x1.period_us(100);
     pwm_x2.period_us(100);
     // pwmはcenter alignするので両方0.50でブレーキ状態
@@ -204,18 +213,12 @@ int main(void){
     pwm_y1.write(0.50f);
     pwm_y2.write(0.50f);
 
-    // center align
+    // PWMのcenter align
     TIM1->CR1 |= TIM_CR1_CMS_0;
     TIM2->CR1 |= TIM_CR1_CMS_0;
     TIM3->CR1 |= TIM_CR1_CMS_0;
     TIM4->CR1 |= TIM_CR1_CMS_0;
 
-    // サーボ初期化
-    servo_motors[0].init();
-    servo_motors[1].init();
-
-
-    serial_port.set_baud(115200);
 
     while(1){
         // コントローラー入力
@@ -239,13 +242,13 @@ int main(void){
         j_RX = wii.joy_RX();
         j_RY = wii.joy_RY();
 
-        // 順回転の命令
+        // アーム順回転の命令
         if(b_plus){
             //printf("b_plus pressed\r\n");
             target_flag = 1;
             t.start();
         }
-        // 逆回転の命令
+        // アーム逆回転の命令
         if(b_minus){
             //printf("b_minus pressed\r\n");
             target_flag = -1;
@@ -263,19 +266,14 @@ int main(void){
         }
 
         // ハンド制御部
-        hand_control(b_A, 0);
-        hand_control(b_X, 1);
-        hand_control(b_Y, 2);
+        hand_control(b_A, valve1, 1);
+        hand_control(b_X, valve2, 2);
+        hand_control(b_Y, valve3, 3);
 
         // b_Rを押すごとに90°回転．ただし, 180°未満の場合のみ
-        servo_rot_p(b_R, p0, temp_angle_0, 0);
+        servo_rot_p(b_R, p1, temp_angle_1, servo1);
         // b_Lを押すごとに-90°回転．ただし, 180°以上の場合のみ
-        servo_rot_m(b_L, p0, temp_angle_0, 0);
-
-        // b_ZRを押すごとに90°回転．ただし, 180°未満の場合のみ
-        servo_rot_p(b_ZR, p1, temp_angle_1, 1);
-        // b_ZLを押すごとに-90°回転．ただし, 180°以上の場合のみ
-        servo_rot_m(b_ZL, p1, temp_angle_1, 1);
+        servo_rot_m(b_L, p1, temp_angle_1, servo1);
 
         // ジョイスティックの入力を非線形に -0.5 - +0.5 の間に変換(x方向の制御)
         x_move(j_LX);
@@ -311,7 +309,13 @@ int main(void){
             //printf("p: %f, i: %f, d: %f\r\n", p, i, d);
             //HAL_Delay(200);
         }*/
-
+        /*
+        printf("j_LX: %d\r\n", j_LX - JYOY_L_CENTER-2);
+        printf("j_RY: %d\r\n", j_RY - JYOY_R_CENTER-1);
+        printf("Volum_x: %f\r\n", vol1);
+        printf("Volum_y: %f\r\n", vol2);
+        printf("limit1: %d\r\n", limit1.read());
+        */
 
         //HAL_Delay(200);
     }
@@ -398,7 +402,7 @@ void y_move(unsigned char& j_RY){
     }
 }
 
-void servo_rot_p(bool& b_R_, int& p, int& temp_angle, int i){
+void servo_rot_p(bool& b_R_, int& p, int& temp_angle, Servo6221MG& servo){
     if(b_R_ && p >= 0 && p < 180){
             //** down **//
         temp_angle += each_range;
@@ -406,18 +410,18 @@ void servo_rot_p(bool& b_R_, int& p, int& temp_angle, int i){
             temp_angle = 179;
         }
         while (p < temp_angle) {
-            HAL_Delay(3);
-            servo_motors[i].roll(p);
+            HAL_Delay(7);
+            servo.roll(p);
             p += 1;
             led = !led;
             //printf("p:%d\r\n", p);
         }
-        printf("now p%d: %d\n\r", i, p);
+        printf("now p1: %d\n\r", p);
         HAL_Delay(10);
     }
 }
 
-void servo_rot_m(bool& b_L_, int& p, int& temp_angle, int i){
+void servo_rot_m(bool& b_L_, int& p, int& temp_angle, Servo6221MG& servo){
     if(b_L_ && p > 0 && p < 180){
         //** up **//
         temp_angle -= each_range;
@@ -425,24 +429,24 @@ void servo_rot_m(bool& b_L_, int& p, int& temp_angle, int i){
             temp_angle = 0;
         }
         while (p >= temp_angle) {
-            HAL_Delay(3);
-            servo_motors[i].roll(p);
+            HAL_Delay(7);
+            servo.roll(p);
             p -= 1;
             led = !led;
         }
         if(p<0){
             p=0;
         }
-        printf("now p%d: %d\n\r", i, p);
+        printf("now p1: %d\n\r", p);
         HAL_Delay(10);
     }   
 }
 
-void hand_control(bool& b, int i){
+void hand_control(bool& b, DigitalOut& valve, int i){
     if(b){
-        printf("b_A pressed!\r\n");
-        hand[i] = !hand[i];
-        printf("valve%d: %d\r\n",i, hand[i].read());
+        printf("b_%d pressed!\r\n", i);
+        valve = !valve;
+        printf("valve%d: %d\r\n",i, valve.read());
         // ここの値を変えて入力の受付時間を調整
         HAL_Delay(300);
     }
