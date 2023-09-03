@@ -56,7 +56,6 @@ float diff[2];
 #define Krc 0.30f            // 指数平均ゲイン
 #define limit_duty 0.44f
 static float pre_i = 0.0f;
-float p, i, d;
 
 // encoder
 Encoder encoder(PA_0, PA_1);
@@ -108,6 +107,7 @@ static BufferedSerial serial_port(USBTX, USBRX);
 
 // PID制御
 float pid_motor(float count, float target){
+    float p, i, d;
     #define delta 0.001f
     #define delta_inv 1000.0f // d項のdeltaを乗算用に調整
 
