@@ -304,20 +304,20 @@ int main(void){
         */
         
         // debug
-        /*
+        
         if(flag==1){
             printf("%d,%f,%d\r\n",t.read_ms(), target_transition, encoder.get_encoder_count());
             //printf("pre_integral: %f\r\n", pre_i);
             //printf("p: %f, i: %f, d: %f\r\n", p, i, d);
             //HAL_Delay(200);
-        }*/
-        
+        }
+        /*
         printf("j_LX: %d\r\n", j_LX - JYOY_L_CENTER-2);
         printf("j_RY: %d\r\n", j_RY - JYOY_R_CENTER-1);
         printf("Volum_x: %f\r\n", vol_x);
         printf("Volum_y: %f\r\n", vol_y);
         printf("limit1: %d\r\n", limit1.read());
-        
+        */
 
         //HAL_Delay(200);
     }
