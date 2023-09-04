@@ -281,19 +281,16 @@ int main(void){
         x_move(j_LX);
         // ジョイスティックの入力を非線形に -0.5 - +0.5 の間に変換(y方向の制御)
         y_move(j_RY);
-/*      
+      
         if(limit1){
+            printf("limit1: push\r\n");
+            pwm_x1.write(0.50f);
+            pwm_x2.write(0.40f);
+            HAL_Delay(500);
             pwm_x1.write(0.50f);
             pwm_x2.write(0.50f);
-            HAL_Delay(100);
-            
-            //pwm_x1.write(0.70f);
-            //pwm_x2.write(0.30f);
-            //HAL_Delay(100);
-            //pwm_x1.write(0.50f);
-            //pwm_x2.write(0.50f);
-            
-        }*/        
+            HAL_Delay(500);
+        }        
         /*
         if(b_B){
             flag=0;
