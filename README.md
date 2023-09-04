@@ -1,10 +1,10 @@
-# **CatchRobo_2023**
+# CatchRobo_2023
 robot control code for CatchRobo2023
 
-## 開発ブランチ
+### 開発ブランチ
 exp_branch
 
-## 開発環境, ファイル概要
+### 開発環境, ファイル概要
 - 開発環境：keil studio cloud(mbed-os), Thonny(MicroPython)  
 - 開発ボード：Nucleo F446re, Raspberry-pi Pico  
 - mbed ver：mbed-os 6.15.1  
@@ -12,10 +12,10 @@ exp_branch
 - mbed_app.json：command file for floating point display(mbed)  
 - Encoder_InterruptIn：library files for reading encoder value  
 - WII_CLASSIC_CONTROLLER_：library files for Wii Classic Controller  
-- Servo6221MG：library files for jx-servo6221MG (notice: code is ajusted for center-aligned pwm)
+- Servo6221MG：library files for jx-servo6221MG (notice: code is ajusted for center-aligned pwm)  
 
-## 主要なプログラム説明
-- ### PID制御部(DCモータの位置制御用)
+### 主要なプログラム説明
+#### PID制御部(DCモータの位置制御用)
 ~~~ cpp
 float diff[2];
 #define Kp 0.0245f           // pゲイン 
@@ -67,7 +67,7 @@ float pid_motor(float count, float target){
   - 低回転速度になるとエンコーダの値が安定しないため, D項の計算に指数平均を実装した.
   - 応答性を高めるために固定アンチワインドアップを実装した.
 
-- ### 回転(位置)制御部
+#### 回転(位置)制御部
 ~~~ cpp
 Ticker flipper;
 #define time 1  // time [ms]
@@ -127,7 +127,7 @@ int main(void){
     2. その値をステップ入力としてPID制御を組み, PIDの各パラメータを調整. 
     3. 調整済みのパラメータで指令値までの応答を関数として読み取り, それを1次関数と2次関数で近似.
 
-- ### ハンド移動部
+#### ハンド移動部
 ~~~ cpp
 void x_move(unsigned char& j_LX){
     float x = j_LX - JYOY_L_CENTER-2;
@@ -203,4 +203,4 @@ void y_move(unsigned char& j_RY){
   - 今回は直交した動きだったのでバカみたいな座標変換の必要もなく, 適当な自作の関数に合わせているだけである.
   - JYOY_R_CENTERやらJYOY_L_CENTERといった値は, ジョイスティックを触っていないときに出力値(vol_x, vol_y)を0に合わせるためのもの.
   - 0で不連続になっているのは, こうした方がジョイスティックを触っていないときに安定してブレーキ状態になるためである.
-  - なぜここがPID制御じゃないかというと, 単なる技術不足です.
+  - なぜここがPID制御じゃないかというと, 単なる技術不足です:trollface:
