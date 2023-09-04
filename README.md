@@ -106,11 +106,14 @@ void motor_control(){
     pwm_rot1.write(0.50f -vol_rot);
     pwm_rot2.write(0.50f +vol_rot);
 }
+
 int main(void){
-"""
+    /*中略*/
+
     // pid制御用割込み関数
     flipper.attach(&motor_control, chrono::milliseconds(time));
-"""
+
+    /*中略*/
 }
 ~~~
   - 前述のPID制御部分を使った位置制御.
