@@ -42,19 +42,19 @@ PwmOut pwm_rot2(PA_10);
 float vol_rot=0.0f;
 
 // PID
-float target_count = 0.0f;
-float target_transition = 0.0f;
 #define command 25250.0f
 float target_plus = command;
 float target_minus = -command;
+float target_count = 0.0f;
+float target_transition = 0.0f;
 int target_flag = 0;
 
-float diff[2];
 #define Kp 0.0245f           // pゲイン 
 #define Ki 0.09f             // iゲイン     
 #define Kd 0.0003f           // dゲイン   
 #define Krc 0.30f            // 指数平均ゲイン
 #define limit_duty 0.44f
+float diff[2];
 static float pre_i = 0.0f;
 
 // encoder
@@ -107,9 +107,9 @@ static BufferedSerial serial_port(USBTX, USBRX);
 
 // PID制御
 float pid_motor(float count, float target){
-    float p, i, d;
     #define delta 0.001f
     #define delta_inv 1000.0f // d項のdeltaを乗算用に調整
+    float p, i, d;
 
     static float integral = 0.0f;
     float d_tmp;              // 差分格納用
