@@ -12,8 +12,6 @@ WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 #define I2C_UPDATE_TIME 1.0
 #define JYOY_L_CENTER 31
 #define JYOY_R_CENTER 16
-#define JYOY_MARGIN 4
-#define JYOY_MARGIN2 3
 
 bool b_A;
 bool b_B;
