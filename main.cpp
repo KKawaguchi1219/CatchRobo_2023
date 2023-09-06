@@ -53,7 +53,7 @@ int target_flag = 0;
 #define Ki 0.09f             // iゲイン     
 #define Kd 0.0003f           // dゲイン   
 #define Krc 0.30f            // 指数平均ゲイン
-#define limit_duty 0.44f
+#define limit_duty 0.45f
 float diff[2];
 static float pre_i = 0.0f;
 
@@ -89,8 +89,8 @@ void x_move(unsigned char& j_LX);
 void y_move(unsigned char& j_RY);
 
 // ServoMotor制御
-void servo_rot_p(bool& b_R, int& p, int& temp_angle, Servo6221MG& servo);
-void servo_rot_m(bool& b_L, int& p, int& temp_angle, Servo6221MG& servo);
+void servo_rot_p(bool& b_L, int& p, int& temp_angle, Servo6221MG& servo);
+void servo_rot_n(bool& b_R, int& p, int& temp_angle, Servo6221MG& servo);
 
 // ハンド制御
 void hand_control(bool& b, DigitalOut& hand, int i);
@@ -169,6 +169,8 @@ void motor_control(){
             target_transition = target_minus;
         }
 
+    }else if(target_flag == 0){
+        target_transition = 0.0f;
     }
     encoder_count = encoder.get_encoder_count();
     vol_rot = (pid_motor(encoder_count, target_transition));
@@ -266,16 +268,22 @@ int main(void){
             target_transition=0;
             encoder.reset_count();
         }
+        // 微調整用
+        if(b_DU){
+            target_transition++;
+        }else if(b_DD){
+            target_transition--;
+        }
 
         // ハンド制御部
         hand_control(b_A, valve1, 1);
         hand_control(b_X, valve2, 2);
         hand_control(b_Y, valve3, 3);
 
-        // b_Rを押すごとに90°回転．ただし, 180°未満の場合のみ
-        servo_rot_p(b_R, p1, temp_angle_1, servo1);
-        // b_Lを押すごとに-90°回転．ただし, 180°以上の場合のみ
-        servo_rot_m(b_L, p1, temp_angle_1, servo1);
+        // b_Lを押すごとに90°回転．ただし, 180°未満の場合のみ
+        servo_rot_p(b_L, p1, temp_angle_1, servo1);
+        // b_Rを押すごとに-90°回転．ただし, 180°以上の場合のみ
+        servo_rot_n(b_R, p1, temp_angle_1, servo1);
 
         // ジョイスティックの入力を非線形に -0.5 - +0.5 の間に変換(x方向の制御)
         x_move(j_LX);
@@ -401,15 +409,15 @@ void y_move(unsigned char& j_RY){
     }
 }
 
-void servo_rot_p(bool& b_R_, int& p, int& temp_angle, Servo6221MG& servo){
-    if(b_R_ && p >= 0 && p < 180){
+void servo_rot_p(bool& b_L_, int& p, int& temp_angle, Servo6221MG& servo){
+    if(b_L_ && p >= 0 && p < 180){
             //** down **//
         temp_angle += each_range;
         if(temp_angle >= 180){
             temp_angle = 179;
         }
         while (p < temp_angle) {
-            HAL_Delay(7);
+            HAL_Delay(10);
             servo.roll(p);
             p += 1;
             led = !led;
@@ -420,15 +428,15 @@ void servo_rot_p(bool& b_R_, int& p, int& temp_angle, Servo6221MG& servo){
     }
 }
 
-void servo_rot_m(bool& b_L_, int& p, int& temp_angle, Servo6221MG& servo){
-    if(b_L_ && p > 0 && p < 180){
+void servo_rot_n(bool& b_R_, int& p, int& temp_angle, Servo6221MG& servo){
+    if(b_R_ && p > 0 && p < 180){
         //** up **//
         temp_angle -= each_range;
         if(temp_angle < 0){
             temp_angle = 0;
         }
         while (p >= temp_angle) {
-            HAL_Delay(7);
+            HAL_Delay(10);
             servo.roll(p);
             p -= 1;
             led = !led;
