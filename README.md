@@ -1,4 +1,4 @@
-# CatchRobo_2023
+# Robot_Name: St. 1st, CatchRobo-2023
 Robot control code for CatchRobo-2023
 
 ### 開発ブランチ
@@ -122,7 +122,7 @@ int main(void){
 ~~~math
 y = 
 \begin{cases}
- \pm 7.21t & (0 \le t \le 3000)\\
+\pm 7.21t & (0 \le t \le 3000)\\
 \pm 0.00362(t-4000)^2 \pm 25250  & (3000 < t \le 4000)\\
 \pm 25250 & (t > 4000)
 \end{cases}
@@ -210,5 +210,5 @@ void y_move(unsigned char& j_RY){
   - y_move内のyに2がかかっているのは, 変換式を共通にするための処置.
       - j_LXが-26 ~ +26で変化するのに対して, j_RYは-13 ~ +13の範囲で変化するため.
   - 0で不連続になっているのは, こうした方がジョイスティックを触っていないときに安定してブレーキ状態になるためである.
-  - なぜここがフィードバック制御じゃないかというと, 単なる技術と時間不足です:trollface:
+  - なぜここがフィードバック制御じゃないかというと, 単なる技術不足と怠慢です:trollface:
 
