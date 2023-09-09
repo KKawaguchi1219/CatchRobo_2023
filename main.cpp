@@ -4,7 +4,6 @@
 #include "WiiClassicController.h"
 #include "Servo6221MG.h"
 
-
 // wiiリモコン
 WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 
@@ -12,6 +11,7 @@ WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 #define I2C_UPDATE_TIME 1.0
 #define JYOY_L_CENTER 31
 #define JYOY_R_CENTER 16
+#define xy_margin 1.05f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
 
 bool b_A;
 bool b_B;
@@ -167,8 +167,6 @@ void motor_control(){
             target_transition = target_minus;
         }
 
-    }else if(target_flag == 0){
-        target_transition = 0.0f;
     }
     encoder_count = encoder.get_encoder_count();
     vol_rot = (pid_motor(encoder_count, target_transition));
@@ -358,11 +356,12 @@ void x_move(unsigned char& j_LX){
         }else if (x<-x2 && x>=-x3) {
             vol_x = 0.0015625*(x+26.0)*(x+26.0) - 0.45;
         }
+        vol_x *= xy_margin;
 
-        if(vol_x >= 0.45){
-            vol_x = 0.45;
-        }else if(vol_x <= -0.45){
-            vol_x = -0.45;
+        if(vol_x >= 0.45*xy_margin){
+            vol_x = 0.45*xy_margin;
+        }else if(vol_x <= -0.45*xy_margin){
+            vol_x = -0.45*xy_margin;
         }
         pwm_x1.write(0.50 -vol_x);
         pwm_x2.write(0.50 +vol_x);
@@ -394,10 +393,11 @@ void y_move(unsigned char& j_RY){
         }else if (y<-y2 && y>=-y3) {
             vol_y = 0.0015625*(y+26.0)*(y+26.0) - 0.45;
         }
-        if(vol_y >= 0.45){
-            vol_y = 0.45;
-        }else if(vol_y <= -0.45){
-            vol_y = -0.45;
+        vol_y *= xy_margin;
+        if(vol_y >= 0.45*xy_margin){
+            vol_y = 0.45*xy_margin;
+        }else if(vol_y <= -0.45*xy_margin){
+            vol_y = -0.45*xy_margin;
         }
         pwm_y1.write(0.50f -vol_y);
         pwm_y2.write(0.50f +vol_y);
@@ -415,7 +415,7 @@ void servo_rot_p(bool& b_L_, int& p, int& temp_angle, Servo6221MG& servo){
             temp_angle = 179;
         }
         while (p < temp_angle) {
-            HAL_Delay(10);
+            HAL_Delay(25);
             servo.roll(p);
             p += 1;
             led = !led;
@@ -434,7 +434,7 @@ void servo_rot_n(bool& b_R_, int& p, int& temp_angle, Servo6221MG& servo){
             temp_angle = 0;
         }
         while (p >= temp_angle) {
-            HAL_Delay(10);
+            HAL_Delay(25);
             servo.roll(p);
             p -= 1;
             led = !led;
