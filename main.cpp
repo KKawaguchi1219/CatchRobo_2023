@@ -8,7 +8,7 @@
 WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 
 // コントローラー値
-#define I2C_UPDATE_TIME 1.0
+
 #define JYOY_L_CENTER 31
 #define JYOY_R_CENTER 16
 #define xy_margin 1.05f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
