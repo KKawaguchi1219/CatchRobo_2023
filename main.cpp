@@ -1,8 +1,10 @@
 #include "mbed.h"
 #include "math.h"
+#include <stdint.h>
 #include "Encoder_InterruptIn.h"
 #include "WiiClassicController.h"
 #include "Servo6221MG.h"
+#include <cstdint>
 
 // wiiリモコン
 WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
@@ -11,7 +13,7 @@ WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 
 #define JYOY_L_CENTER 31
 #define JYOY_R_CENTER 16
-#define xy_margin 1.05f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
+#define xy_margin 1.1f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
 
 bool b_A;
 bool b_B;
@@ -40,18 +42,21 @@ PwmOut pwm_rot2(PA_10);
 float vol_rot=0.0f;
 
 // PID
-#define command 25250.0f
-float target_plus = command;
-float target_minus = -command;
 float target_count = 0.0f;
 float target_transition = 0.0f;
+#define command 25400.0f
+float target_plus = command;
+float target_minus = -command;
+float t_base = command*0.1386962552, t1 = t_base-500, t2 = t_base+500;
+//a = (7.21*t1-command)/(t1-t2)*(t1-t2);
+float a = fabs((7.21*t1-command)*0.000001);
 int target_flag = 0;
 
 #define Kp 0.0245f           // pゲイン 
 #define Ki 0.09f             // iゲイン     
 #define Kd 0.0003f           // dゲイン   
 #define Krc 0.30f            // 指数平均ゲイン
-#define limit_duty 0.45f
+#define limit_duty 0.48f
 float diff[2];
 static float pre_i = 0.0f;
 
@@ -98,7 +103,7 @@ Ticker flipper;
 #define time 1  // time [ms]
 
 Timer t;
-int tim=0;
+uint32_t tim=0;
 
 //　デバッグ出力用
 static BufferedSerial serial_port(USBTX, USBRX);
@@ -143,14 +148,15 @@ float pid_motor(float count, float target){
 
 // 回転制御 割込み関数
 void motor_control(){
+    t1 = (int) t1, t2=(int)t2;
     if(target_flag == 1 && target_transition < target_plus){
         if(target_transition < 0) target_transition=0;
         tim = t.read_ms();
 
-        if(tim<=3000){
+        if(tim<=t1){
             target_transition += 7.21;
-        }else if(tim>3000 && tim <= 4000){
-            target_transition = -0.00362*pow(tim-4000.0, 2.0) + target_plus;
+        }else if(tim>t1 && tim <= t2){
+            target_transition = -a*pow(tim-t2, 2.0) + target_plus;
         }else{
             target_transition = target_plus;
         }
@@ -159,10 +165,10 @@ void motor_control(){
         if(target_transition > 0) target_transition=0;
         tim = t.read_ms();
 
-        if(tim<=3000){
+        if(tim<=t1){
             target_transition -= 7.21;
-        }else if(tim>3000 && tim <= 4000){
-            target_transition = 0.00362*pow(tim-4000.0, 2.0) + target_minus;
+        }else if(tim>t1 && tim <= t2){
+            target_transition = a*pow(tim-t2, 2.0) + target_minus;
         }else{
             target_transition = target_minus;
         }
