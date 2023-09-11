@@ -1,9 +1,10 @@
 #include "mbed.h"
 #include "math.h"
+#include <stdint.h>
 #include "Encoder_InterruptIn.h"
 #include "WiiClassicController.h"
 #include "Servo6221MG.h"
-
+#include <cstdint>
 
 // wiiリモコン
 WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
@@ -12,7 +13,7 @@ WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 
 #define JYOY_L_CENTER 31
 #define JYOY_R_CENTER 16
-#define xy_margin 1.05f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
+#define xy_margin 1.1f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
 
 bool b_A;
 bool b_B;
@@ -41,18 +42,21 @@ PwmOut pwm_rot2(PA_10);
 float vol_rot=0.0f;
 
 // PID
-#define command 25250.0f
-float target_plus = command;
-float target_minus = -command;
 float target_count = 0.0f;
 float target_transition = 0.0f;
+#define command 25400.0f
+float target_plus = command;
+float target_minus = -command;
+float t_base = command*0.1386962552, t1 = t_base-500, t2 = t_base+500;
+//a = (7.21*t1-command)/(t1-t2)*(t1-t2);
+float a = fabs((7.21*t1-command)*0.000001);
 int target_flag = 0;
 
 #define Kp 0.0245f           // pゲイン 
 #define Ki 0.09f             // iゲイン     
 #define Kd 0.0003f           // dゲイン   
 #define Krc 0.30f            // 指数平均ゲイン
-#define limit_duty 0.45f
+#define limit_duty 0.48f
 float diff[2];
 static float pre_i = 0.0f;
 
@@ -99,7 +103,7 @@ Ticker flipper;
 #define time 1  // time [ms]
 
 Timer t;
-int tim=0;
+uint32_t tim=0;
 
 //　デバッグ出力用
 static BufferedSerial serial_port(USBTX, USBRX);
@@ -144,14 +148,15 @@ float pid_motor(float count, float target){
 
 // 回転制御 割込み関数
 void motor_control(){
+    t1 = (int) t1, t2=(int)t2;
     if(target_flag == 1 && target_transition < target_plus){
         if(target_transition < 0) target_transition=0;
         tim = t.read_ms();
 
-        if(tim<=3000){
+        if(tim<=t1){
             target_transition += 7.21;
-        }else if(tim>3000 && tim <= 4000){
-            target_transition = -0.00362*pow(tim-4000.0, 2.0) + target_plus;
+        }else if(tim>t1 && tim <= t2){
+            target_transition = -a*pow(tim-t2, 2.0) + target_plus;
         }else{
             target_transition = target_plus;
         }
@@ -160,16 +165,14 @@ void motor_control(){
         if(target_transition > 0) target_transition=0;
         tim = t.read_ms();
 
-        if(tim<=3000){
+        if(tim<=t1){
             target_transition -= 7.21;
-        }else if(tim>3000 && tim <= 4000){
-            target_transition = 0.00362*pow(tim-4000.0, 2.0) + target_minus;
+        }else if(tim>t1 && tim <= t2){
+            target_transition = a*pow(tim-t2, 2.0) + target_minus;
         }else{
             target_transition = target_minus;
         }
 
-    }else if(target_flag == 0){
-        target_transition = 0.0f;
     }
     encoder_count = encoder.get_encoder_count();
     vol_rot = (pid_motor(encoder_count, target_transition));
@@ -359,11 +362,12 @@ void x_move(unsigned char& j_LX){
         }else if (x<-x2 && x>=-x3) {
             vol_x = 0.0015625*(x+26.0)*(x+26.0) - 0.45;
         }
+        vol_x *= xy_margin;
 
-        if(vol_x >= 0.45){
-            vol_x = 0.45;
-        }else if(vol_x <= -0.45){
-            vol_x = -0.45;
+        if(vol_x >= 0.45*xy_margin){
+            vol_x = 0.45*xy_margin;
+        }else if(vol_x <= -0.45*xy_margin){
+            vol_x = -0.45*xy_margin;
         }
         pwm_x1.write(0.50 -vol_x);
         pwm_x2.write(0.50 +vol_x);
@@ -395,10 +399,11 @@ void y_move(unsigned char& j_RY){
         }else if (y<-y2 && y>=-y3) {
             vol_y = 0.0015625*(y+26.0)*(y+26.0) - 0.45;
         }
-        if(vol_y >= 0.45){
-            vol_y = 0.45;
-        }else if(vol_y <= -0.45){
-            vol_y = -0.45;
+        vol_y *= xy_margin;
+        if(vol_y >= 0.45*xy_margin){
+            vol_y = 0.45*xy_margin;
+        }else if(vol_y <= -0.45*xy_margin){
+            vol_y = -0.45*xy_margin;
         }
         pwm_y1.write(0.50f -vol_y);
         pwm_y2.write(0.50f +vol_y);
@@ -416,7 +421,7 @@ void servo_rot_p(bool& b_L_, int& p, int& temp_angle, Servo6221MG& servo){
             temp_angle = 179;
         }
         while (p < temp_angle) {
-            HAL_Delay(10);
+            HAL_Delay(25);
             servo.roll(p);
             p += 1;
             led = !led;
@@ -435,7 +440,7 @@ void servo_rot_n(bool& b_R_, int& p, int& temp_angle, Servo6221MG& servo){
             temp_angle = 0;
         }
         while (p >= temp_angle) {
-            HAL_Delay(10);
+            HAL_Delay(25);
             servo.roll(p);
             p -= 1;
             led = !led;
