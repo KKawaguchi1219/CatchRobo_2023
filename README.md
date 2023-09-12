@@ -1,4 +1,5 @@
-# Robot_Name: St. 1st, CatchRobo-2023
+# 鳥取大学ロボットラボラトリー, CatchRobo-2023
+## Robot Name: せいんと1号(仮)
 Robot control code for CatchRobo-2023
 
 ### 開発ブランチ
