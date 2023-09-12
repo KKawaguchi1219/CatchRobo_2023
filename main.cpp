@@ -13,7 +13,7 @@ WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 
 #define JYOY_L_CENTER 33
 #define JYOY_R_CENTER 17
-#define xy_margin 1.1f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
+#define xy_margin 1.08f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
 
 bool b_A;
 bool b_B;
@@ -86,6 +86,9 @@ int temp_angle_1=90;
 
 // リミットスイッチ
 DigitalIn limit1(PC_12);
+DigitalIn limit2(PC_10);
+DigitalIn limit3(PC_11);
+DigitalIn limit4(PD_2);
 
 // raspi通信用
 DigitalOut signal1(PC_4);
@@ -333,24 +336,16 @@ int main(void){
             //printf("p: %f, i: %f, d: %f\r\n", p, i, d);
             //HAL_Delay(200);
         }*/
-        /*
-        printf("j_LX: %d\r\n", j_LX - JYOY_L_CENTER-2);
-        printf("j_RY: %d\r\n", j_RY - JYOY_R_CENTER-1);
+        
+        printf("j_LX: %d\r\n", j_LX - JYOY_L_CENTER);
+        printf("j_RY: %d\r\n", j_RY - JYOY_R_CENTER);
         printf("Volum_x: %f\r\n", vol_x);
         printf("Volum_y: %f\r\n", vol_y);
         printf("limit1: %d\r\n", limit1.read());
-        */
+        
 
-        //HAL_Delay(200);
+        HAL_Delay(200);
     }
-/*
-        printf("j_LX: %d\r\n", j_LX - JYOY_L_CENTER-2);
-        printf("j_RY: %d\r\n", j_RY - JYOY_R_CENTER-1);
-        printf("Volum_x: %f\r\n", vol1);
-        printf("Volum_y: %f\r\n", vol2);
-        printf("limit1: %d\r\n", limit1.read());
-       HAL_Delay(100);
-*/
 
 
     return 0;
