@@ -11,8 +11,8 @@ WiiClassicController wii(D14, D15); // SDA(PB_8, GREEN), SCL(PB_9, BLUE)
 
 // コントローラー値
 
-#define JYOY_L_CENTER 31
-#define JYOY_R_CENTER 16
+#define JYOY_L_CENTER 33
+#define JYOY_R_CENTER 17
 #define xy_margin 1.1f             // 現時点(9/7)でvol=±0.45fが最高なので, 変換式の最後に1.1倍して±0.495fぐらいを最高にしてみては？
 
 bool b_A;
@@ -86,6 +86,10 @@ int temp_angle_1=90;
 
 // リミットスイッチ
 DigitalIn limit1(PC_12);
+
+// raspi通信用
+DigitalOut signal1(PC_4);
+DigitalOut signal2(PA_12);
 
 // xy移動用関数
 void x_move(unsigned char& j_LX);
@@ -225,7 +229,6 @@ int main(void){
     TIM3->CR1 |= TIM_CR1_CMS_0;
     TIM4->CR1 |= TIM_CR1_CMS_0;
 
-
     while(1){
         // コントローラー入力
         b_A = wii.button_A();
@@ -270,12 +273,23 @@ int main(void){
             target_transition=0;
             encoder.reset_count();
         }
-        // 微調整用
+
+        // 角度微調整用
         if(b_DU){
             target_transition++;
         }else if(b_DD){
             target_transition--;
         }
+
+        // raspi通信
+        if(b_ZR){
+            signal1 = !signal1;
+            HAL_Delay(100);
+        }else if (b_ZL) {
+            signal2 = !signal2;
+            HAL_Delay(100);
+        }
+        printf("sig1: %d, sig2: %d\r\n", signal1.read(), signal2.read());
 
         // ハンド制御部
         hand_control(b_A, valve1, 1);
@@ -291,7 +305,8 @@ int main(void){
         x_move(j_LX);
         // ジョイスティックの入力を非線形に -0.5 - +0.5 の間に変換(y方向の制御)
         y_move(j_RY);
-      
+        
+        // リミットスイッチ
         if(limit1){
             printf("limit1: push\r\n");
             pwm_x1.write(0.50f);
@@ -311,13 +326,13 @@ int main(void){
         */
         
         // debug
-        
+        /*
         if(flag==1){
             printf("%d,%f,%d\r\n",t.read_ms(), target_transition, encoder.get_encoder_count());
             //printf("pre_integral: %f\r\n", pre_i);
             //printf("p: %f, i: %f, d: %f\r\n", p, i, d);
             //HAL_Delay(200);
-        }
+        }*/
         /*
         printf("j_LX: %d\r\n", j_LX - JYOY_L_CENTER-2);
         printf("j_RY: %d\r\n", j_RY - JYOY_R_CENTER-1);
@@ -342,13 +357,13 @@ int main(void){
 }
 
 void x_move(unsigned char& j_LX){
-    float x = j_LX - JYOY_L_CENTER-2;
+    float x = j_LX - JYOY_L_CENTER;
     float x1 = 8.0f;
     float x2 = 18.0f;
     float x3 = 26.0f;
 
     if(x != 0.0f){
-            // 変換式
+        // 変換式...もっとコンパクトにまとめたほうが良いと思います
         if(x>0.0f && x<=x1){
             vol_x = 0.0015625*x*x;
         }else if(x>x1 && x<=x2){
@@ -362,6 +377,7 @@ void x_move(unsigned char& j_LX){
         }else if (x<-x2 && x>=-x3) {
             vol_x = 0.0015625*(x+26.0)*(x+26.0) - 0.45;
         }
+        // 出力のさらに調整...上の変換式を練り直すのがめんどくｓ
         vol_x *= xy_margin;
 
         if(vol_x >= 0.45*xy_margin){
@@ -378,7 +394,7 @@ void x_move(unsigned char& j_LX){
 }
 
 void y_move(unsigned char& j_RY){
-    float y = 2.0*(j_RY - JYOY_R_CENTER-1);
+    float y = 2.0*(j_RY - JYOY_R_CENTER);
     float y1 = 8.0f;
     float y2 = 18.0f;
     float y3 = 26.0f;
