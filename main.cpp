@@ -44,7 +44,8 @@ float vol_rot=0.0f;
 // PID
 float target_count = 0.0f;
 float target_transition = 0.0f;
-#define command 25520.0f
+
+#define command 25400.0f
 float target_plus = command;
 float target_minus = -command;
 float t_base = command*0.1386962552, t1 = t_base-500, t2 = t_base+500;

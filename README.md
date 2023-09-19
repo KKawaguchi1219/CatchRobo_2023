@@ -141,12 +141,11 @@ int main(void){
         - なぜ500 msかと言うと関数を設計しているときになんかいい感じに見えたので...:shipit:
 
 ~~~math
-y = 
+y(t) = 
 \begin{cases}
 \pm 7.21t & (0 \le t \le t_1)\\
 \pm a(t-t_2)^2 \pm \rm{command}  & (t_1 < t \le t_2)\\
 \pm \rm{command} & (t > t_2)
-\end{cases}
 ~~~
 
 - 上記の値は以下の手順で決定した.  
