@@ -341,7 +341,7 @@ void servo_rot_n(bool& button, int& p, int& temp_angle, Servo6221MG& servo){
 - サーボモータは共通エリアのワークを取るためにハンドを90度回転させるのに使った.
 - pを1ずつ変化させ, サーボにp度回るように指令を送る.
 - 回転速度は servo.roll(p) の1行上の HAL_Delay() で制御.
-- Servo6221MG.hは昔の先輩が作ったライブラリ.
+- Servo6221MG.hは昔の先輩が作ったライブラリをちょっと改造したもの.
 
 #### ハンド制御部
 ```cpp
