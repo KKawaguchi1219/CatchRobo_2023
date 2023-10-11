@@ -1,6 +1,7 @@
 # 鳥取大学ロボットラボラトリー, CatchRobo-2023
 ## Robot Name: せいんと1号(仮)
-Robot control code for CatchRobo-2023
+Robot control code for CatchRobo-2023  
+[動いてるところ(X(旧Twitter)リンク)](https://twitter.com/T_Robot_Labo/status/1711256343653572734)
 
 ### 開発ブランチ
 exp_branch
